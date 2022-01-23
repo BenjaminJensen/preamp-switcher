@@ -13,6 +13,7 @@
 #include "esp_spi_flash.h"
 #include "hal.h"
 #include "event_collector.h"
+#include "event_dispatcher.h"
 
 
 void app_main(void)
@@ -21,6 +22,7 @@ void app_main(void)
 
 hal_setup();
 event_collector_init();
+event_dispatcher_init();
 
 
     /* Print chip information */

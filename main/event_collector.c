@@ -76,8 +76,9 @@ void event_button_send(uint8_t nr, enum button_state_e state) {
 
 uint8_t get_event(event_t *e) {
     BaseType_t res = pdFALSE;
-
-    res = xQueueReceive( event_queue, e, ( TickType_t ) 10 );
+    if( event_queue != 0) {
+        res = xQueueReceive( event_queue, e, ( TickType_t ) 10 );
+    }
 
     return (res == pdFALSE ? 0 : 1);
 }
