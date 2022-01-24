@@ -13,18 +13,6 @@
 #define EVENT_QUEUE_SIZE    (32)
 
 /*******************************************************
- *                Type Definitions
- *******************************************************/
-enum event_types_e {EVENT_BUTTON = 0, EVENT_ENCODER = 1, EVENT_MIDI = 2};
-
-typedef struct {
-    uint8_t type;
-    uint8_t data0;
-    uint8_t data1;
-    uint8_t data2;
-} event_t;
-
-/*******************************************************
  *                Globals
  *******************************************************/
 static QueueHandle_t event_queue = 0;
