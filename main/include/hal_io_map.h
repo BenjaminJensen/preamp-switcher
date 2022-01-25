@@ -1,9 +1,13 @@
 #pragma once
+#include "hal/gpio_types.h"
 
 /*******************************************************
  *                Macros
  *******************************************************/
-
+#define IO_SDIO_CLK     (GPIO_NUM_27)
+#define IO_SDIO_SDO     (GPIO_NUM_32)
+#define IO_SDIO_LATCH   (GPIO_NUM_33)
+#define IO_SDIO_SDI     (GPIO_NUM_34)
 
 /*******************************************************
  *                Type Definitions
@@ -13,11 +17,3 @@
 /*******************************************************
  *                Function Declarations
  *******************************************************/
-
-/**
- * @brief Initializes the HAL layer for buttons
- *
- * @return ESP_OK on success
- */
-
-esp_err_t hal_sdio_setup(void);

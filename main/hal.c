@@ -22,7 +22,7 @@ volatile uint16_t relay_state = 0;
 
 void timer_task(void) {
     uint16_t buttons;
-    buttons = sdio_update(relay_state);
-    button_update(buttons);
+    //buttons = sdio_update(relay_state);
+    // button_update(buttons);
 
 }
