@@ -4,19 +4,19 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "hal_sdio.h"
-#include "driver/gptimer.h"
+#include "driver/timer.h"
 #include "driver/gpio.h"
 #include "hal_io_map.h"
 
 
 /*******************************************************
- *                Globals
+ *                Defines
  *******************************************************/
-gptimer_handle_t gptimer = NULL;
-static const char* TAG = "E_COL";
-static volatile uint32_t cnt = 0;
-static volatile uint16_t button_in_tmp = 0;
-static volatile uint16_t relay_out_tmp = 0;
+// Timer 
+#define TIMER_DIVIDER         (16)  //  Hardware timer clock divider
+#define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
+#define TIMER_NR    (TIMER_0)
+#define TIMER_GROUP (TIMER_GROUP_0)
 
 // Output pins
 #define GPIO_CLK    IO_SDIO_CLK
@@ -27,7 +27,28 @@ static volatile uint16_t relay_out_tmp = 0;
 #define GPIO_SDI     IO_SDIO_SDI
 #define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_SDI) 
 
+// SDIO
 #define SDIO_BIT_CNT    (16)
+
+/*******************************************************
+ *                Types
+ *******************************************************/
+typedef struct {
+    uint32_t timer_group;
+    uint32_t timer_idx;
+    uint32_t interval;
+    bool auto_reload;
+} timer_info_t;
+
+/*******************************************************
+ *                Globals
+ *******************************************************/
+static const char* TAG = "E_COL";
+static volatile uint32_t cnt = 0;
+static volatile uint16_t button_in_tmp = 0;
+static volatile uint16_t relay_out_tmp = 0;
+
+timer_info_t timer_handle;
 
 /*******************************************************
  *                Function Declarations
@@ -52,7 +73,7 @@ static bool setup_gpio(void);
  *
  * @return true on success
  */
-static bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+static bool IRAM_ATTR timer_group_isr_callback(void* args)
 {
     // CLK update
     // toggle 
@@ -84,7 +105,7 @@ static bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm
         // Set latch high
         gpio_set_level(IO_SDIO_LATCH, 1 );
         // stop timer immediately
-        gptimer_stop(timer);
+        timer_pause(TIMER_GROUP, TIMER_NR);
     
         // Set flag when done
     }
@@ -99,21 +120,41 @@ static bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm
  * @return true on success
  */
 static bool setup_timer(void) {
-    // setup timer
-    ESP_LOGI(TAG, "Create timer handle");
 
-    gptimer_config_t timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_APB,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000, // 1MHz, 1 tick=1us
-    };
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
+    // Setup timer handle
+    timer_handle.timer_group = TIMER_GROUP;
+    timer_handle.timer_idx = TIMER_NR;
+    timer_handle.auto_reload = true;
+    timer_handle.interval = 0;
 
-    // Register callback
-    gptimer_event_callbacks_t cbs = {
-        .on_alarm = timer_callback,
-    };
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, 0));
+     /* Select and initialize basic parameters of the timer */
+    timer_config_t config = {
+        .divider = TIMER_DIVIDER,
+        .counter_dir = TIMER_COUNT_UP,
+        .counter_en = TIMER_PAUSE,
+        .alarm_en = TIMER_ALARM_EN,
+        .auto_reload = timer_handle.auto_reload,
+    }; // default clock source is APB
+    timer_init(timer_handle.timer_group, timer_handle.timer_idx, &config);
+
+    /* Timer's counter will initially start from value below.
+       Also, if auto_reload is set, this value will be automatically reload on alarm */
+    timer_set_counter_value(timer_handle.timer_group, timer_handle.timer_idx, 0);
+
+    /* Configure the alarm value and the interrupt on alarm. */
+    timer_set_alarm_value(timer_handle.timer_group, 
+                        timer_handle.timer_idx, 
+                        1000);
+    timer_enable_intr(timer_handle.timer_group, timer_handle.timer_idx);
+
+   
+    timer_isr_callback_add(timer_handle.timer_group, 
+                            timer_handle.timer_idx, 
+                            timer_group_isr_callback,
+                             &timer_handle, 
+                             0);
+
+    timer_start(timer_handle.timer_group, timer_handle.timer_idx);
 
     return true;
 }
