@@ -1,4 +1,6 @@
 #pragma once
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 /*******************************************************
  *                Macros
@@ -21,3 +23,11 @@
  */
 
 esp_err_t hal_sdio_setup(void);
+
+
+/**
+ * @brief Initiate SDIO transfer
+ *
+ * @return ESP_OK on success
+ */
+void sdio_start_transmission(TaskHandle_t*);

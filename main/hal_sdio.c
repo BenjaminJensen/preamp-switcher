@@ -15,6 +15,7 @@
 // Timer 
 #define TIMER_DIVIDER         (16)  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
+#define TIMER_RELOAD            (5000)
 #define TIMER_NR    (TIMER_0)
 #define TIMER_GROUP (TIMER_GROUP_0)
 
@@ -38,6 +39,7 @@ typedef struct {
     uint32_t timer_idx;
     uint32_t interval;
     bool auto_reload;
+    TaskHandle_t* task_to_wake;
 } timer_info_t;
 
 /*******************************************************
@@ -48,7 +50,7 @@ static volatile uint32_t cnt = 0;
 static volatile uint16_t button_in_tmp = 0;
 static volatile uint16_t relay_out_tmp = 0;
 
-timer_info_t timer_handle;
+timer_info_t timer_handle = {0};
 
 /*******************************************************
  *                Function Declarations
@@ -75,11 +77,14 @@ static bool setup_gpio(void);
  */
 static bool IRAM_ATTR timer_group_isr_callback(void* args)
 {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     // CLK update
     // toggle 
 
-    gpio_set_level(IO_SDIO_CLK, cnt & 0x1 );
+    timer_info_t *info = args;
 
+    gpio_set_level(IO_SDIO_CLK, cnt & 0x1 );
+        
     // initial call
     if(cnt == (SDIO_BIT_CNT *2)) {
         // Set latch low
@@ -108,6 +113,18 @@ static bool IRAM_ATTR timer_group_isr_callback(void* args)
         timer_pause(TIMER_GROUP, TIMER_NR);
     
         // Set flag when done
+        configASSERT( timer_handle.task_to_wake != NULL );
+
+        // Notify the task that the transmission is complete.
+        vTaskNotifyGiveIndexedFromISR( timer_handle.task_to_wake, 
+                                        0, 
+                                        &xHigherPriorityTaskWoken );
+
+        // There are no transmissions in progress, so no tasks to notify. 
+        timer_handle.task_to_wake = NULL;
+
+        // Sampling task wakes
+        portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
     }
     
     cnt--;
@@ -133,7 +150,7 @@ static bool setup_timer(void) {
         .counter_dir = TIMER_COUNT_UP,
         .counter_en = TIMER_PAUSE,
         .alarm_en = TIMER_ALARM_EN,
-        .auto_reload = timer_handle.auto_reload,
+        .auto_reload = 1,
     }; // default clock source is APB
     timer_init(timer_handle.timer_group, timer_handle.timer_idx, &config);
 
@@ -144,7 +161,7 @@ static bool setup_timer(void) {
     /* Configure the alarm value and the interrupt on alarm. */
     timer_set_alarm_value(timer_handle.timer_group, 
                         timer_handle.timer_idx, 
-                        1000);
+                        TIMER_RELOAD);
     timer_enable_intr(timer_handle.timer_group, timer_handle.timer_idx);
 
    
@@ -154,7 +171,7 @@ static bool setup_timer(void) {
                              &timer_handle, 
                              0);
 
-    timer_start(timer_handle.timer_group, timer_handle.timer_idx);
+    
 
     return true;
 }
@@ -199,4 +216,14 @@ esp_err_t hal_sdio_setup(void) {
     setup_timer();
 
     return 0;
+}
+
+void sdio_start_transmission(TaskHandle_t* task_to_wake) {
+    // Save task to wake when transmission is done
+    timer_handle.task_to_wake = task_to_wake;
+
+    cnt = 123;//timer_state_cnt;
+    //Start timer
+    timer_set_auto_reload(timer_handle.timer_group, timer_handle.timer_idx, 1);
+    timer_start(timer_handle.timer_group, timer_handle.timer_idx);
 }
