@@ -194,6 +194,7 @@ static bool setup_gpio(void) {
  * @return ESP_OK on success
  */
 esp_err_t hal_sdio_setup(void) {
+    ESP_LOGI(TAG, "Setup HAL layer SDIO");
     setup_gpio();
     setup_timer();
 

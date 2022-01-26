@@ -5,6 +5,30 @@
       "type": "espidf",
       "name": "Launch",
       "request": "launch"
+    },
+    {
+      "name": "GDB QEMU",
+      "type": "cppdbg",
+      "request": "launch",
+      "MIMode": "gdb",
+      "miDebuggerPath": "${command:espIdf.getXtensaGdb}",
+      "program": "${workspaceFolder}/build/${command:espIdf.getProjectName}.elf",
+      "windows": {
+        "program": "${workspaceFolder}\\build\\${command:espIdf.getProjectName}.elf"
+      },
+      "cwd": "${workspaceFolder}",
+      "environment": [{ "name": "PATH", "value": "${config:idf.customExtraPaths}" }],
+      "setupCommands": [
+        { "text": "target remote :1234" },
+        { "text": "set remote hardware-watchpoint-limit 2"},
+        { "text": "mon reset halt" },
+        { "text": "thb ${command:espIdf.getProjectName}" },
+        { "text": "flushregs" }
+      ],
+      "externalConsole": false,
+      "logging": {
+        "engineLogging": true
+      }
     }
   ]
 }
