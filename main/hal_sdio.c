@@ -8,14 +8,15 @@
 #include "driver/gpio.h"
 #include "hal_io_map.h"
 
-
 /*******************************************************
  *                Defines
  *******************************************************/
 // Timer 
-#define TIMER_DIVIDER         (16)  //  Hardware timer clock divider
+/*
+#define TIMER_DIVIDER         (1)  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
-#define TIMER_RELOAD            (5000)
+#define TIMER_RELOAD            (80)
+*/
 #define TIMER_NR    (TIMER_0)
 #define TIMER_GROUP (TIMER_GROUP_0)
 
@@ -29,7 +30,7 @@
 #define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_SDI) 
 
 // SDIO
-#define SDIO_BIT_CNT    (16)
+#define SDIO_BIT_CNT    (8)
 
 /*******************************************************
  *                Types
@@ -39,7 +40,7 @@ typedef struct {
     uint32_t timer_idx;
     uint32_t interval;
     bool auto_reload;
-    TaskHandle_t* task_to_wake;
+    TaskHandle_t** task_to_wake;
 } timer_info_t;
 
 /*******************************************************
@@ -61,15 +62,6 @@ static bool setup_gpio(void);
 /*******************************************************
  *                Function implementation
  *******************************************************/
-
-
-/*
-* 165 latch in on falling edge
-* 595 latch out on rising edge
-*
-*
-*/
-
 /**
  * @brief timer_callback used for serial IO
  *
@@ -78,24 +70,26 @@ static bool setup_gpio(void);
 static bool IRAM_ATTR timer_group_isr_callback(void* args)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    // CLK update
-    // toggle 
-
-    timer_info_t *info = args;
-
+    
+    // State counter update
+    cnt--;
+    // CLK update toggle
     gpio_set_level(IO_SDIO_CLK, cnt & 0x1 );
-        
+    
     // initial call
-    if(cnt == (SDIO_BIT_CNT *2)) {
+    if(cnt > SDIO_BIT_CNT*2 + 5) {
+        // Error
+        //gpio_set_level(IO_SDIO_LATCH, 1 );
+    } 
+    else if(cnt > (SDIO_BIT_CNT *2 )) {
         // Set latch low
         gpio_set_level(IO_SDIO_LATCH, 0 );
     
     } 
-    else if(cnt < (SDIO_BIT_CNT *2)) {
-        if( (cnt & 0x1) == 0) { // Rising edge of CLK
+    else if(cnt > 0) {
+        if( (cnt & 0x1) == 1) { // Rising edge of CLK
             // 595 shift in on rising edge
             // 165 shift on rising edge
-            
         }
         else { // Faling edge of CLK
             // sample on falling edge
@@ -106,29 +100,30 @@ static bool IRAM_ATTR timer_group_isr_callback(void* args)
             relay_out_tmp = relay_out_tmp >> 1;
         }
     } 
-    else if(cnt == 0) {
+    else if(cnt == 0 ) {
         // Set latch high
         gpio_set_level(IO_SDIO_LATCH, 1 );
+
+        // Reset
+        gpio_set_level(IO_SDIO_CLK, 0);
+        gpio_set_level(IO_SDIO_SDO, 0 );
+
         // stop timer immediately
         timer_pause(TIMER_GROUP, TIMER_NR);
     
-        // Set flag when done
-        configASSERT( timer_handle.task_to_wake != NULL );
-
         // Notify the task that the transmission is complete.
-        vTaskNotifyGiveIndexedFromISR( timer_handle.task_to_wake, 
+        vTaskNotifyGiveIndexedFromISR( *(timer_handle.task_to_wake), 
                                         0, 
                                         &xHigherPriorityTaskWoken );
 
         // There are no transmissions in progress, so no tasks to notify. 
-        timer_handle.task_to_wake = NULL;
+        *(timer_handle.task_to_wake) = NULL;
 
         // Sampling task wakes
         portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
     }
     
-    cnt--;
-    return 0;
+    return xHigherPriorityTaskWoken;
 }
 
 /**
@@ -138,40 +133,23 @@ static bool IRAM_ATTR timer_group_isr_callback(void* args)
  */
 static bool setup_timer(void) {
 
-    // Setup timer handle
-    timer_handle.timer_group = TIMER_GROUP;
-    timer_handle.timer_idx = TIMER_NR;
-    timer_handle.auto_reload = true;
-    timer_handle.interval = 0;
-
-     /* Select and initialize basic parameters of the timer */
-    timer_config_t config = {
-        .divider = TIMER_DIVIDER,
+  timer_config_t config = {
+        .divider = 8,
         .counter_dir = TIMER_COUNT_UP,
         .counter_en = TIMER_PAUSE,
         .alarm_en = TIMER_ALARM_EN,
         .auto_reload = 1,
     }; // default clock source is APB
-    timer_init(timer_handle.timer_group, timer_handle.timer_idx, &config);
+    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+    timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, timer_group_isr_callback, 0, 0);
 
-    /* Timer's counter will initially start from value below.
-       Also, if auto_reload is set, this value will be automatically reload on alarm */
-    timer_set_counter_value(timer_handle.timer_group, timer_handle.timer_idx, 0);
-
-    /* Configure the alarm value and the interrupt on alarm. */
-    timer_set_alarm_value(timer_handle.timer_group, 
-                        timer_handle.timer_idx, 
-                        TIMER_RELOAD);
-    timer_enable_intr(timer_handle.timer_group, timer_handle.timer_idx);
-
-   
-    timer_isr_callback_add(timer_handle.timer_group, 
-                            timer_handle.timer_idx, 
-                            timer_group_isr_callback,
-                             &timer_handle, 
-                             0);
-
-    
+    uint32_t *reload_low = (uint32_t *)(0x3FF5F018);
+    uint32_t *alarm_low = (uint32_t *)(0x3FF5F010);
+    uint32_t *config_reg = (uint32_t *)(0x3FF5F000);
+    *alarm_low = 500;
+    *reload_low = 0;
+    // Note: do not enable timer (bit[31]=0)
+    //*config_reg = 0x600A0C00;
 
     return true;
 }
@@ -202,6 +180,11 @@ static bool setup_gpio(void) {
     io_conf_i.pull_up_en = 1;
     gpio_config(&io_conf_i);
     
+
+    // Set default GPIO state
+    gpio_set_level(IO_SDIO_LATCH, 1 );
+    gpio_set_level(IO_SDIO_CLK, 0);
+    gpio_set_level(IO_SDIO_SDO, 0 );
     return true;
 }
 
@@ -222,8 +205,12 @@ void sdio_start_transmission(TaskHandle_t* task_to_wake) {
     // Save task to wake when transmission is done
     timer_handle.task_to_wake = task_to_wake;
 
-    cnt = 123;//timer_state_cnt;
+    // Setup state counter
+    cnt = SDIO_BIT_CNT*2 + 2; // +2 extra cycle for latch;
+    
+    // Latch relay value
+    relay_out_tmp = 0x81;
+
     //Start timer
-    timer_set_auto_reload(timer_handle.timer_group, timer_handle.timer_idx, 1);
-    timer_start(timer_handle.timer_group, timer_handle.timer_idx);
+    timer_start(TIMER_GROUP_0, TIMER_0);
 }
