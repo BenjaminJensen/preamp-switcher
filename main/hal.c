@@ -40,8 +40,10 @@ static void input_sampling_task(void* args) {
     TickType_t xLastWakeTime;
     // 20 ms sampling time
     const TickType_t xFrequency = pdMS_TO_TICKS( 20 );
-    const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 10 );
+    const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 1000 );
 
+    uint8_t buttons = 0;
+    uint8_t buttons_last = 0;
     // Initialise the xLastWakeTime variable with the current time.
      xLastWakeTime = xTaskGetTickCount();
     
@@ -56,32 +58,36 @@ static void input_sampling_task(void* args) {
         if( ulNotificationValue == 1 )
         {
             // The transmission ended as expected.
+            buttons = sdio_get_buttons();
+            if(buttons != buttons_last) {
+                buttons_last = buttons;
+                ESP_LOGI(TAG, "Buttons update {%d}", buttons  );
+            }
         }
         else
         {
             // The call to ulTaskNotifyTake() timed out.
             // and the sampling never ended
+            ESP_LOGW(TAG, "Sample timeout" );
         }
 
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
     }
 }
-
-uint32_t* run_cnt;
+uint16_t relay_cnt = 0;
 static void start_sampling( void ) {
     // Veryfy that handle
     if(task_to_wake == NULL ) {
         // Store handle, to wake up the transmission is done
         task_to_wake = xTaskGetCurrentTaskHandle();
         //ESP_LOGI(TAG, "Start sampling {%d}", 0  );
-        run_cnt = sdio_start_transmission( &task_to_wake );
+        sdio_start_transmission( &task_to_wake, relay_cnt++);
     }
     else {
-        uint32_t * cnt_reg = (uint32_t *)(0x3FF5F004);
+        //uint32_t * cnt_reg = (uint32_t *)(0x3FF5F004);
         uint32_t *reload_low = (uint32_t *)(0x3FF5F018);
         uint32_t *alarm_low = (uint32_t *)(0x3FF5F010);
         uint32_t *config_reg = (uint32_t *)(0x3FF5F000);
-        ESP_LOGE(TAG, "Unable to start sampling, sampling under way {%u}", *run_cnt );
         ESP_LOGI(TAG, "reload: {%d}, alarm: {%d}, config: {%x}", *reload_low, *alarm_low, *config_reg);
     }    
 }

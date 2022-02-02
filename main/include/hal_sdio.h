@@ -30,4 +30,6 @@ esp_err_t hal_sdio_setup(void);
  *
  * @return ESP_OK on success
  */
-uint32_t* sdio_start_transmission(TaskHandle_t*);
+void sdio_start_transmission(TaskHandle_t*, uint16_t);
+
+uint8_t sdio_get_buttons(void);
