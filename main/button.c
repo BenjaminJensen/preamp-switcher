@@ -39,7 +39,7 @@ void button_update(uint16_t but) {
     for(int i = 0; i < MAX_BUTTONS; i++ ) {
         buttons[i].nr = i;
         // Decide on new state
-        if(but & i) {
+        if(but & (1 << i)) {
             new_state = (buttons[i].state >> 1) | 0x80;
         }
         else {
@@ -51,11 +51,11 @@ void button_update(uint16_t but) {
                 // if button is pushed
                 event_button_send(buttons[i].nr, BUTTON_PRESS_E);
             }
-            else if((new_state & BUTTON_PUSHED) == BUTTON_PUSHED) {
+            else if(new_state == BUTTON_PUSHED) {
                 // If buttos have been pushed for some time
                 event_button_send(buttons[i].nr, BUTTON_PRESSED_E);
             }
-            else if((new_state & BUTTON_RELEASED) == BUTTON_RELEASED) {
+            else if(new_state  == BUTTON_RELEASED) {
                 // If button have been released
                 event_button_send(buttons[i].nr, BUTTON_RELEASED_E);
             }
