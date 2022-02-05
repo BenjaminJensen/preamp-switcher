@@ -7,6 +7,7 @@
 #include "hal_sdio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "button.h"
 
 /*******************************************************
  *                Global Declarations
@@ -59,9 +60,11 @@ static void input_sampling_task(void* args) {
         {
             // The transmission ended as expected.
             buttons = sdio_get_buttons();
+            button_update(buttons);
             if(buttons != buttons_last) {
                 buttons_last = buttons;
-                ESP_LOGI(TAG, "Buttons update {%d}", buttons  );
+                ESP_LOGI(TAG, "Buttons update {%x}", buttons  );
+                //printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(byte));
             }
         }
         else
@@ -75,13 +78,27 @@ static void input_sampling_task(void* args) {
     }
 }
 uint16_t relay_cnt = 0;
+uint16_t relay_out = 0;
 static void start_sampling( void ) {
     // Veryfy that handle
     if(task_to_wake == NULL ) {
         // Store handle, to wake up the transmission is done
         task_to_wake = xTaskGetCurrentTaskHandle();
         //ESP_LOGI(TAG, "Start sampling {%d}", 0  );
-        sdio_start_transmission( &task_to_wake, relay_cnt++);
+        relay_cnt++;
+        if(relay_cnt > 25) {
+            relay_cnt = 0;
+            if(relay_out == 0) {
+                relay_out = 0x8000;
+            }
+            else if(relay_out < 0x0080) {
+                relay_out = 0x8000;
+            }
+            else {
+                relay_out = relay_out >> 1;
+            }
+        }
+        sdio_start_transmission( &task_to_wake, relay_out);
     }
     else {
         //uint32_t * cnt_reg = (uint32_t *)(0x3FF5F004);

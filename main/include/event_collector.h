@@ -9,10 +9,10 @@
  *                Type Definitions
  *******************************************************/
 enum button_state_e {
-    BUTTON_PRESS_E,
-    BUTTON_PRESSED_E,
-    BUTTON_RELEASE_E,
-    BUTTON_RELEASED_E
+    BUTTON_PRESS_E = 0,
+    BUTTON_PRESSED_E = 1,
+    BUTTON_RELEASE_E = 2,
+    BUTTON_RELEASED_E = 3
 };
 
 enum event_types_e {EVENT_BUTTON = 0, EVENT_ENCODER = 1, EVENT_MIDI = 2};

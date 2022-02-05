@@ -29,6 +29,7 @@ static TaskHandle_t task_handle = NULL;
  *******************************************************/
 static void event_dispatcher_task( void * pvParameters );
 
+const static char* but_state_txt[4] = {"Press","Pressed","Release","Released"};
 /*******************************************************
  *                Private Function implementation
  *******************************************************/
@@ -39,8 +40,13 @@ static void event_dispatcher_task( void * pvParameters ) {
     // Task main loop
     while(1) {
         if( get_event(&e) != 0) {
-            // Event received
-            ESP_LOGI(TAG, "Event received {%d,%d,%d,%d}!", e.type, e.data0, e.data1, e.data2);
+            if(e.type == EVENT_BUTTON) {
+                // Event received
+                ESP_LOGI(TAG, "Event received {Button, nr(%d),%s}!", e.data0, but_state_txt[e.data1]);
+            }
+            else {
+                ESP_LOGI(TAG, "Event received {%d,%d,%d,%d}!", e.type, e.data0, e.data1, e.data2);
+            }
         }
     }
 }

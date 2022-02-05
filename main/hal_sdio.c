@@ -30,7 +30,7 @@
 #define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_SDI) 
 
 // SDIO
-#define SDIO_BIT_CNT    (8)
+#define SDIO_BIT_CNT    (16)
 
 /*******************************************************
  *                Types
@@ -74,7 +74,6 @@ static bool IRAM_ATTR timer_group_isr_callback(void* args)
     // State counter update
     cnt--;
     // CLK update toggle
-    gpio_set_level(IO_SDIO_CLK, cnt & 0x1 );
     
     // initial call
     if(cnt > SDIO_BIT_CNT*2 + 5+2) {
@@ -89,23 +88,33 @@ static bool IRAM_ATTR timer_group_isr_callback(void* args)
     else if(cnt > (SDIO_BIT_CNT *2 + 1)) {
         // Set latch low
         gpio_set_level(IO_SDIO_LATCH, 1 );
+        // Sample 1th bit
+        
+        button_in_tmp |= gpio_get_level(GPIO_SDI) & 0x0001;
+        button_in_tmp = ( button_in_tmp << 1) & 0xFFFE;
     
     } 
     else if(cnt > 1) {
+        
+        gpio_set_level(IO_SDIO_CLK, cnt & 0x1 );
         if( (cnt & 0x1) == 1) { // Rising edge of CLK
             // 595 shift in on rising edge
             // 165 shift on rising edge
+            
         }
         else { // Faling edge of CLK
             // sample on falling edge
-            button_in_tmp |= gpio_get_level(GPIO_SDI) & 0x0001;
-            button_in_tmp = ( button_in_tmp << 1) & 0xFFFE;
             // send out on falling edge
             gpio_set_level(IO_SDIO_SDO, (relay_out_tmp & 0x0001 ) );
             relay_out_tmp = relay_out_tmp >> 1;
+            if(cnt > 4) {
+                button_in_tmp |= gpio_get_level(GPIO_SDI) & 0x0001;
+                button_in_tmp = ( button_in_tmp << 1) & 0xFFFE;
+            }
         }
     }
     else if(cnt > 0) { 
+        gpio_set_level(IO_SDIO_CLK, cnt & 0x1 );
         gpio_set_level(IO_SDIO_LATCH, 0 );
     }
     else if(cnt == 0 ) {
@@ -218,11 +227,12 @@ void sdio_start_transmission(TaskHandle_t* task_to_wake, uint16_t relay) {
     
     // Latch relay value
     relay_out_tmp = relay;
+    button_in_tmp = 0;
 
     //Start timer
     timer_start(TIMER_GROUP_0, TIMER_0);
 }
 
 uint8_t sdio_get_buttons(void) {
-    return button_in_tmp;
+    return button_in_tmp >> 8;
 }

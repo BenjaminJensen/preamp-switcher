@@ -40,7 +40,7 @@ event_dispatcher_init();
     while(1) {
     // for (int i = 10; i >= 0; i--) {
         //printf("Restarting in %d seconds...\n", i);
-        event_button_send(1, BUTTON_PRESS_E);
+        //event_button_send(1, BUTTON_PRESS_E);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     printf("Restarting now.\n");
