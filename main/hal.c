@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "button.h"
+#include "encoder.h"
 
 /*******************************************************
  *                Global Declarations
@@ -46,7 +47,7 @@ static void input_sampling_task(void* args) {
     uint8_t buttons = 0;
     uint8_t buttons_last = 0;
     // Initialise the xLastWakeTime variable with the current time.
-     xLastWakeTime = xTaskGetTickCount();
+    xLastWakeTime = xTaskGetTickCount();
     
     while(1) {
         
@@ -60,6 +61,10 @@ static void input_sampling_task(void* args) {
         {
             // The transmission ended as expected.
             buttons = sdio_get_buttons();
+            uint8_t enc = (buttons >> 6) & 0x03;
+            encoder_update(enc);
+            buttons &= 0x1F;
+
             button_update(buttons);
             if(buttons != buttons_last) {
                 buttons_last = buttons;
