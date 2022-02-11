@@ -87,7 +87,7 @@
  * than 10 lines of logic.
  */
 
-#include "rotary_encoder.h"
+#include "encoder.h"
 
 #include "esp_log.h"
 #include "driver/gpio.h"

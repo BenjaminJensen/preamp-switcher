@@ -8,7 +8,12 @@
     "esp_system.h": "c",
     "stdio.h": "c",
     "gpio.h": "c",
-    "gpio_types.h": "c"
+    "gpio_types.h": "c",
+    "freertos.h": "c",
+    "array": "c",
+    "string": "c",
+    "string_view": "c",
+    "uart.h": "c"
   },
   "idf.portWin": "COM3"
 }

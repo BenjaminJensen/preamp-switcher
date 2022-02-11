@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "hal.h"
 #include "hal_sdio.h"
+#include "hal_midi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "button.h"
@@ -29,10 +30,13 @@ static void start_sampling( void );
  *******************************************************/
 esp_err_t hal_setup(void) {
     // Setup serial IO
-    hal_sdio_setup();
+    //hal_sdio_setup();
+    
+    // Setup midi hal layer
+    hal_midi_setup();
 
     // Create input task
-    xTaskCreate( input_sampling_task, "HAL_SAMPL", 2046, 0, 5, sampling_task_handle);
+    //xTaskCreate( input_sampling_task, "HAL_SAMPL", 2046, 0, 5, sampling_task_handle);
 
     return 0;
 }
@@ -62,7 +66,8 @@ static void input_sampling_task(void* args) {
             // The transmission ended as expected.
             buttons = sdio_get_buttons();
             uint8_t enc = (buttons >> 6) & 0x03;
-            encoder_update(enc);
+            //encoder_update(enc);
+
             buttons &= 0x1F;
 
             button_update(buttons);
@@ -110,6 +115,6 @@ static void start_sampling( void ) {
         uint32_t *reload_low = (uint32_t *)(0x3FF5F018);
         uint32_t *alarm_low = (uint32_t *)(0x3FF5F010);
         uint32_t *config_reg = (uint32_t *)(0x3FF5F000);
-        ESP_LOGI(TAG, "reload: {%d}, alarm: {%d}, config: {%x}", *reload_low, *alarm_low, *config_reg);
+        //ESP_LOGI(TAG, "reload: {%d}, alarm: {%d}, config: {%x}", *reload_low, *alarm_low, *config_reg);
     }    
 }
