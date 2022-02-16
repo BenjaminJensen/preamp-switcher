@@ -45,17 +45,20 @@ void midi_process(uint8_t *data, int len) {
     for(int i = 0; i < len; i++) {
         uint8_t b = data[i];
         
-        if(b & 0x80) {
-            uint8_t chan = b & 0x0F;
-            if(chan == handle->channel || handle->channel > 0x0F) { // 0x0F = OMNI
-                // System message
-                if(b >= 0xF0) {
-                    midi_handle_system(b, handle);
-                }
-                else {
-                    // Command message
-                    midi_handle_command(b, handle);
-                }
+        uint8_t chan = b & 0x0F;
+        if(b & 0x80 && b < 0xF0 && (chan == handle->channel || handle->channel > 0x0F) ) {
+            uint8_t num_bytes[8] = {2,2,2,2,2,1,2,0};
+
+            uint8_t type = (b >> 4) & 0x07;
+            handle->bytes_left = num_bytes[type];
+        }
+        else if(b >= 0xF0) {
+            // System message
+            if(b == 0xFF) {
+                // SYSEX end
+            }
+            else {
+                
             }
         }
         else {
