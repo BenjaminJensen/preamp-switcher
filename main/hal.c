@@ -10,6 +10,14 @@
 #include "freertos/task.h"
 #include "button.h"
 #include "encoder.h"
+#include "midi.h"
+#include "system.h"
+#include "event_collector.h"
+
+/*******************************************************
+ *                Defines
+ *******************************************************/
+#define MIDI_BUF_SIZE       (256)
 
 /*******************************************************
  *                Global Declarations
@@ -25,6 +33,9 @@ void button_update(uint16_t buttons);
 static void input_sampling_task(void* args);
 static void start_sampling( void );
 
+static void midi_task(void *arg);
+static void midi_driver_init(void);
+
 /*******************************************************
  *                Function implementation
  *******************************************************/
@@ -33,11 +44,13 @@ esp_err_t hal_setup(void) {
     //hal_sdio_setup();
     
     // Setup midi hal layer
-    hal_midi_setup();
+    hal_midi_setup(MIDI_BUF_SIZE);
+    midi_driver_init();
 
     // Create input task
     //xTaskCreate( input_sampling_task, "HAL_SAMPL", 2046, 0, 5, sampling_task_handle);
 
+    xTaskCreate(midi_task, "midi_task", 4096, NULL, 10, NULL);
     return 0;
 }
 
@@ -117,4 +130,48 @@ static void start_sampling( void ) {
         uint32_t *config_reg = (uint32_t *)(0x3FF5F000);
         //ESP_LOGI(TAG, "reload: {%d}, alarm: {%d}, config: {%x}", *reload_low, *alarm_low, *config_reg);
     }    
+}
+
+/****************************************************************************
+ * -------------------- MIDI Section -------------------------------------- *
+ * *************************************************************************/
+
+const system_params_t *sys_params;
+/*
+*
+*/
+static void midi_task(void *arg) {
+    uint8_t data[MIDI_BUF_SIZE];
+
+    ESP_LOGI(TAG, "MIDI Task started");
+    
+    while (1) {
+        // Read data from the UART
+        int len = hal_midi_get_bytes(data, MIDI_BUF_SIZE,  1 / portTICK_RATE_MS);
+        
+
+        if(len > 0) {
+            //ESP_LOGI(TAG, "Received: %.*s", len, data);
+
+            midi_process(data, len);
+            // Write data back to the UART
+            hal_midi_put_bytes(data, len);
+        }
+    }
+}
+
+static void midi_driver_handle_cc(uint8_t *data, int len) {
+
+    if(len != 2) {
+        ESP_LOGW(TAG, "MIDI CC Data length error (%d)", len);
+    }
+    else {
+        ESP_LOGD(TAG, "MIDI CC received {%d, %d}", data[0], data[1]);
+        event_send_midi_cc(data[0], data[1]);
+    }    
+}
+
+static void midi_driver_init(void) {
+    sys_params = system_get_param();
+    midi_register_handler(midi_driver_handle_cc, CC);
 }

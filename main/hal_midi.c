@@ -18,7 +18,6 @@
 #define MIDI_UART_PORT      (UART_NUM_1) 
 #define BUFFER_SIZE         (32)
 #define MIDI_UART_BAUDRATE  (31250)
-#define MIDI_BUF_SIZE       (256)
 
 /*******************************************************
  *                Globals
@@ -34,7 +33,7 @@ static void midi_task(void *arg);
  *                Function implementation
  *******************************************************/
 
-void hal_midi_setup() {
+void hal_midi_setup(int midi_buf_size) {
     /* Configure parameters of an UART driver,
      * communication pins and install the driver */
     uart_config_t uart_config = {
@@ -46,29 +45,20 @@ void hal_midi_setup() {
         .source_clk = UART_SCLK_APB,
     };
 
-    ESP_ERROR_CHECK(uart_driver_install(MIDI_UART_PORT, MIDI_BUF_SIZE*2 , 0, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_driver_install(MIDI_UART_PORT, midi_buf_size*2 , 0, 0, NULL, 0));
     ESP_ERROR_CHECK(uart_param_config(MIDI_UART_PORT, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(MIDI_UART_PORT, 4, 5, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
-    xTaskCreate(midi_task, "midi_task", 4096, NULL, 10, NULL);
 }
 
-/*
-*
-*/
-static void midi_task(void *arg) {
-    uint8_t data[MIDI_BUF_SIZE];
 
-    ESP_LOGI(TAG, "MIDI Task started");
-    
-    while (1) {
-        // Read data from the UART
-        int len = uart_read_bytes(MIDI_UART_PORT, data, MIDI_BUF_SIZE, 1 / portTICK_RATE_MS);
+int hal_midi_get_bytes(uint8_t *data, int max_buf_size, int wait) {
+    int len = 0;
+    len = uart_read_bytes(MIDI_UART_PORT, data, max_buf_size, wait);
 
-        if(len > 0) {
-            ESP_LOGI(TAG, "Received: %.*s", len, data);
-            // Write data back to the UART
-            uart_write_bytes(MIDI_UART_PORT, data, len);
-        }
-    }
+    return len;
+}
+
+int hal_midi_put_bytes(uint8_t *data, int len) {
+    return uart_write_bytes(MIDI_UART_PORT, data, len);
 }

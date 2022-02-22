@@ -18,11 +18,9 @@
 
 void app_main(void)
 {
-    printf("Hello world!\n");
-
-hal_setup();
-event_collector_init();
-event_dispatcher_init();
+    hal_setup();
+    event_collector_init();
+    event_dispatcher_init();
 
 
     /* Print chip information */
@@ -40,7 +38,7 @@ event_dispatcher_init();
     while(1) {
     // for (int i = 10; i >= 0; i--) {
         //printf("Restarting in %d seconds...\n", i);
-        //event_button_send(0, BUTTON_PRESS_E);
+        //event_send_button(0, BUTTON_PRESS_E);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     printf("Restarting now.\n");

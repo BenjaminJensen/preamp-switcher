@@ -8,7 +8,20 @@
 /*******************************************************
  *                Type Definitions
  *******************************************************/
-
+typedef struct {
+    uint8_t f0_cc;
+    uint8_t f1_cc;
+    uint8_t f2_cc;
+    uint8_t f3_cc;
+    uint8_t f4_cc;
+    uint8_t f5_cc;
+    uint8_t f6_cc;
+    uint8_t f7_cc;
+    uint8_t amp0_cc;
+    uint8_t amp1_cc;
+    uint8_t bypass_cc;
+    uint8_t midi_channel;
+} system_params_t;
 
 /*******************************************************
  *                Function Declarations
@@ -21,8 +34,5 @@
  * @param but bitmask of current sampled button state
  * @return ESP_OK on success
  */
-void hal_midi_setup(int midi_buf_size);
 
-int hal_midi_get_bytes(uint8_t *, int, int);
-
-int hal_midi_put_bytes(uint8_t *data, int len);
+const system_params_t* system_get_param(void);

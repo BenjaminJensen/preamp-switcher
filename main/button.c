@@ -49,19 +49,19 @@ void button_update(uint16_t but) {
         if(new_state != buttons[i].state) {
             if(new_state == BUTTON_PUSH) {
                 // if button is pushed
-                event_button_send(buttons[i].nr, BUTTON_PRESS_E);
+                event_send_button(buttons[i].nr, BUTTON_PRESS_E);
             }
             else if(new_state == BUTTON_PUSHED) {
                 // If buttos have been pushed for some time
-                event_button_send(buttons[i].nr, BUTTON_PRESSED_E);
+                event_send_button(buttons[i].nr, BUTTON_PRESSED_E);
             }
             else if(new_state  == BUTTON_RELEASED) {
                 // If button have been released
-                event_button_send(buttons[i].nr, BUTTON_RELEASED_E);
+                event_send_button(buttons[i].nr, BUTTON_RELEASED_E);
             }
             else if(new_state == BUTTON_RELEASE) {
                 // Button released
-                event_button_send(buttons[i].nr, BUTTON_RELEASE_E);
+                event_send_button(buttons[i].nr, BUTTON_RELEASE_E);
             }
             else {
                 // Something wrong

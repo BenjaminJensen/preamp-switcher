@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "event_collector.h"
+#include "system.h"
 
 /*******************************************************
  *                Defines
@@ -26,11 +27,15 @@ static TaskHandle_t task_handle = NULL;
 
 const static char* but_state_txt[4] = {"Press","Pressed","Release","Released"};
 
+const system_params_t *sys_params;
+
 /*******************************************************
  *                Function Declarations
  *******************************************************/
 static void event_dispatcher_task( void * pvParameters );
+
 void event_handler_button(uint8_t nr, uint8_t state);
+void event_handler_midi_cc(uint8_t nr, uint8_t val);
 
 /*******************************************************
  *                Private Function implementation
@@ -47,6 +52,11 @@ static void event_dispatcher_task( void * pvParameters ) {
                 ESP_LOGI(TAG, "Event received {Button, nr(%d),%s}!", e.data0, but_state_txt[e.data1]);
                 event_handler_button(e.data0, e.data1);
             }
+            else  if(e.type == EVENT_MIDI_CC) {
+                // Event received
+                ESP_LOGD(TAG, "Event received {MIDI CC, nr(%d), value(%d)!", e.data0, e.data1);
+                event_handler_midi_cc(e.data0, e.data1);
+            }
             else {
                 ESP_LOGI(TAG, "Event received {%d,%d,%d,%d}!", e.type, e.data0, e.data1, e.data2);
             }
@@ -60,6 +70,9 @@ static void event_dispatcher_task( void * pvParameters ) {
 
 void event_dispatcher_init(void) {
     BaseType_t xReturned;
+    ESP_LOGI(TAG, "Event Dispatcher init.");
+    sys_params = system_get_param();
+
     /* Create the task, storing the handle. */
     xReturned = xTaskCreate(event_dispatcher_task, "disp_task", 2048,0 , 1, &task_handle );
     if(xReturned != pdPASS) {
@@ -91,8 +104,13 @@ void function_off(uint8_t nr) {
     // relay_update(relay_state)
     // update_ui_function(nr, STATE_OFF)
 }
-void amp_select(uint8_t nr);
+void amp_select(uint8_t nr) {
 
+}
+
+void amp_bypass(void) {
+
+}
 void function_toggle(uint8_t nr) {
     if(relay_state & (1 << nr)) {
         function_off(nr);
@@ -149,5 +167,56 @@ void event_handler_button(uint8_t nr, uint8_t state) {
     }
     else {
         ESP_LOGW(TAG, "event_handler_button(%d, %d) fn==0!", nr, state);
+    }
+}
+
+void event_handler_midi_cc(uint8_t nr, uint8_t val) {
+    uint8_t func_nr = 0xFF;
+    
+    if(nr == sys_params->f0_cc) {
+        func_nr = 0;
+    }
+    else if(nr == sys_params->f1_cc) {
+        func_nr = 1;
+    }
+    else if(nr == sys_params->f2_cc) {
+        func_nr = 2;
+    }
+    else if(nr == sys_params->f3_cc) {
+        func_nr = 3;
+    }
+    else if(nr == sys_params->f4_cc) {
+        func_nr = 4;
+    }
+    else if(nr == sys_params->f5_cc) {
+        func_nr = 5;
+    }
+    else if(nr == sys_params->f6_cc) {
+        func_nr = 6;
+    }
+    else if(nr == sys_params->f7_cc) {
+        func_nr = 7;
+    }
+    else if(nr == sys_params->amp0_cc) {
+        amp_select(0);
+    }
+    else if(nr == sys_params->amp1_cc) {
+        amp_select(1);
+    }
+    else if(nr == sys_params->bypass_cc) {
+        amp_bypass();
+    }
+    else {
+        ESP_LOGI(TAG, "Unmapped CC (%d, %d)", nr, val);
+    }
+
+    // valid CC
+    if(func_nr < 0xFF) {
+        if(val > 0x3F) {
+            function_on(func_nr);
+        }
+        else {
+            function_off(func_nr);
+        }
     }
 }

@@ -54,11 +54,27 @@ void event_collector_init(void) {
     }
 }
 
-void event_button_send(uint8_t nr, enum button_state_e state) {
+void event_send_button(uint8_t nr, enum button_state_e state) {
     event_t e;
     e.type = EVENT_BUTTON;
     e.data0 = nr;
     e.data1 = state;
+    event_send(e);
+}
+
+
+void event_send_midi_cc(uint8_t nr, uint8_t val) {
+    event_t e;
+    e.type = EVENT_MIDI_CC;
+    e.data0 = nr;
+    e.data1 = val;
+    event_send(e);
+}
+
+void event_send_midi_pc(uint8_t nr) {
+    event_t e;
+    e.type = EVENT_MIDI_PC;
+    e.data0 = nr;
     event_send(e);
 }
 

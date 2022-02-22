@@ -15,7 +15,7 @@ enum button_state_e {
     BUTTON_RELEASED_E = 3
 };
 
-enum event_types_e {EVENT_BUTTON = 0, EVENT_ENCODER = 1, EVENT_MIDI = 2};
+enum event_types_e {EVENT_BUTTON = 0, EVENT_ENCODER = 1, EVENT_MIDI_PC = 2, EVENT_MIDI_CC = 3};
 
 typedef struct {
     uint8_t type;
@@ -42,7 +42,12 @@ void event_collector_init(void);
  * @param state the state of the button "button_state_e"
  * @return ESP_OK on success
  */
-void event_button_send(uint8_t nr, enum button_state_e state);
+void event_send_button(uint8_t nr, enum button_state_e state);
+
+
+void event_send_midi_cc(uint8_t nr, uint8_t val);
+
+void event_send_midi_pc(uint8_t nr);
 
 /**
  * @brief Get an event from the system
