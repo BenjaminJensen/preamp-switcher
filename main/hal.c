@@ -25,6 +25,7 @@
 static TaskHandle_t task_to_wake = NULL;
 TaskHandle_t *sampling_task_handle;
 static const char* TAG = "HAL";
+static uint16_t relay_out = 0;
 
 /*******************************************************
  *                Function Declarations
@@ -52,6 +53,10 @@ esp_err_t hal_setup(void) {
 
     xTaskCreate(midi_task, "midi_task", 4096, NULL, 10, NULL);
     return 0;
+}
+
+void hal_relay_set(uint16_t state) {
+    relay_out = state;
 }
 
 static void input_sampling_task(void* args) {
@@ -101,7 +106,6 @@ static void input_sampling_task(void* args) {
     }
 }
 uint16_t relay_cnt = 0;
-uint16_t relay_out = 0;
 static void start_sampling( void ) {
     // Veryfy that handle
     if(task_to_wake == NULL ) {
@@ -125,10 +129,13 @@ static void start_sampling( void ) {
     }
     else {
         //uint32_t * cnt_reg = (uint32_t *)(0x3FF5F004);
+        /*
         uint32_t *reload_low = (uint32_t *)(0x3FF5F018);
         uint32_t *alarm_low = (uint32_t *)(0x3FF5F010);
         uint32_t *config_reg = (uint32_t *)(0x3FF5F000);
+        */
         //ESP_LOGI(TAG, "reload: {%d}, alarm: {%d}, config: {%x}", *reload_low, *alarm_low, *config_reg);
+        ESP_LOGW(TAG, "Unable to start new sampling, sampling already underway!");
     }    
 }
 

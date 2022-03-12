@@ -21,3 +21,5 @@
  */
 
 esp_err_t hal_setup(void);
+
+void hal_relay_set(uint16_t state);
