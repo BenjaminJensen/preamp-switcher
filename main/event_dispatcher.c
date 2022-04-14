@@ -83,9 +83,9 @@ void event_dispatcher_init(void) {
 
 
 static void handle_button_press_preset(uint8_t nr) {
-    ESP_LOGI(TAG, "Button Press Handler(%d)", nr);
+    //ESP_LOGI(TAG, "Button Press Handler(%d)", nr);
 
-    // toggle function
+    function_toggle(nr);
 
 }
 
@@ -95,15 +95,20 @@ typedef void (*button_handler_fn)(uint8_t);
 
 
 
-static button_handler_fn button_fn_table_preset[MAX_BUTTONS][MAX_STATES] = {0};
+static button_handler_fn button_fn_table_preset[MAX_BUTTONS][MAX_STATES] = {
+        {handle_button_press_preset,0,0,0},
+        {handle_button_press_preset,0,0,0},
+        {handle_button_press_preset,0,0,0},
+        {handle_button_press_preset,0,0,0},
+        {handle_button_press_preset,0,0,0}};
 
 void event_handler_button(uint8_t nr, uint8_t state) {
     button_handler_fn (*table)[MAX_BUTTONS][MAX_STATES];
     table = &button_fn_table_preset;
-    button_fn_table_preset[0][0] = handle_button_press_preset;
+    //button_fn_table_preset[0][0] = handle_button_press_preset;
     if(nr < MAX_BUTTONS && state < MAX_STATES) {
         // NULL pointer check
-        if(table[nr][state] != 0) {
+        if((*table)[nr][state] != 0) {
             (*table)[nr][state](nr);
         }
     }

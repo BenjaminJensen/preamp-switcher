@@ -15,6 +15,7 @@
 #include "event_collector.h"
 #include "event_dispatcher.h"
 
+#include "preset.h"
 
 void app_main(void)
 {
@@ -22,6 +23,9 @@ void app_main(void)
     event_collector_init();
     event_dispatcher_init();
 
+    mem_init();
+    preset_save(0);
+    preset_load(0);
 
     /* Print chip information */
     esp_chip_info_t chip_info;

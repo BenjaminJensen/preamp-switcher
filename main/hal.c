@@ -42,20 +42,21 @@ static void midi_driver_init(void);
  *******************************************************/
 esp_err_t hal_setup(void) {
     // Setup serial IO
-    //hal_sdio_setup();
+    hal_sdio_setup();
     
     // Setup midi hal layer
     hal_midi_setup(MIDI_BUF_SIZE);
     midi_driver_init();
 
     // Create input task
-    //xTaskCreate( input_sampling_task, "HAL_SAMPL", 2046, 0, 5, sampling_task_handle);
+    xTaskCreate( input_sampling_task, "HAL_SAMPL", 2046, 0, 5, sampling_task_handle);
 
     xTaskCreate(midi_task, "midi_task", 4096, NULL, 10, NULL);
     return 0;
 }
 
 void hal_relay_set(uint16_t state) {
+    ESP_LOGI(TAG, "relay set(%x)", state);
     relay_out = state;
 }
 
@@ -112,6 +113,7 @@ static void start_sampling( void ) {
         // Store handle, to wake up the transmission is done
         task_to_wake = xTaskGetCurrentTaskHandle();
         //ESP_LOGI(TAG, "Start sampling {%d}", 0  );
+        /*
         relay_cnt++;
         if(relay_cnt > 25) {
             relay_cnt = 0;
@@ -125,6 +127,7 @@ static void start_sampling( void ) {
                 relay_out = relay_out >> 1;
             }
         }
+        */
         sdio_start_transmission( &task_to_wake, relay_out);
     }
     else {

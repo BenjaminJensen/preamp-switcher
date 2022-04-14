@@ -15,7 +15,9 @@
     "string_view": "c",
     "uart.h": "c",
     "random": "c",
-    "hal.h": "c"
+    "hal.h": "c",
+    "typeinfo": "cpp"
   },
-  "idf.portWin": "COM3"
+  "idf.portWin": "COM5",
+  "idf.flashType": "UART"
 }
