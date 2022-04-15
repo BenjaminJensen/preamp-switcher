@@ -6,6 +6,10 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+
+/*******************************************************
+ *                Includes
+ *******************************************************/
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -16,13 +20,18 @@
 #include "event_dispatcher.h"
 
 #include "preset.h"
+#include "gui.h"
+
+/*******************************************************
+ *                Functions
+ *******************************************************/
 
 void app_main(void)
 {
     hal_setup();
     event_collector_init();
     event_dispatcher_init();
-
+    gui_init();
     mem_init();
     preset_save(0);
     preset_load(0);

@@ -1,7 +1,0 @@
-[submodule "components/lvgl_esp32_drivers"]
-	path = components/lvgl_esp32_drivers
-	url = https://github.com/BenjaminJensen/lvgl_esp32_drivers
-[submodule "components/lvgl"]
-	path = components/lvgl
-	url = https://github.com/lvgl/lvgl
-	branch = release/v7

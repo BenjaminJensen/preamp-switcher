@@ -21,4 +21,4 @@
  * @param but bitmask of current sampled button state
  * @return ESP_OK on success
  */
-
+void gui_init(void);
